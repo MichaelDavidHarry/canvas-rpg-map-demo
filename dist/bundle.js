@@ -130,16 +130,20 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var CanvasMapConfiguration_1 = __webpack_require__(/*! ./CanvasMapConfiguration */ "./src/CanvasMapConfiguration.ts");
 var Direction_1 = __webpack_require__(/*! ./Direction */ "./src/Direction.ts");
+var MapPosition_1 = __webpack_require__(/*! ./MapPosition */ "./src/MapPosition.ts");
 var CanvasMap = (function () {
     function CanvasMap(canvas, configuration) {
-        if (configuration === void 0) { configuration = new CanvasMapConfiguration_1["default"](); }
+        if (configuration === void 0) { configuration = new CanvasMapConfiguration_1.default(); }
         this.canvas = canvas;
         this.configuration = configuration;
         this.xOffset = 0;
         this.yOffset = 0;
+        this.xPosition = 0;
+        this.yPosition = 0;
+        this.mapMoving = false;
         this.backgroundTileImageElement = null;
         var context = canvas.getContext("2d");
         if (context === null) {
@@ -147,34 +151,52 @@ var CanvasMap = (function () {
         }
         this.context = context;
     }
-    CanvasMap.prototype.moveMap = function (direction) {
+    CanvasMap.prototype.moveCharacter = function (direction) {
         var _this = this;
+        if (this.mapMoving) {
+            return;
+        }
+        this.mapMoving = true;
         var intervalHandle = 0;
-        if (direction === Direction_1["default"].Up || direction === Direction_1["default"].Down) {
+        if (direction === Direction_1.default.Up || direction === Direction_1.default.Down) {
+            if (direction === Direction_1.default.Up) {
+                this.yPosition++;
+            }
+            else {
+                this.yPosition--;
+            }
             intervalHandle = setInterval(function () {
-                if (direction === Direction_1["default"].Up) {
-                    _this.yOffset -= _this.configuration.mapMoveStepPixels;
+                if (direction === Direction_1.default.Up) {
+                    _this.yOffset += _this.configuration.mapMoveStepPixels;
                 }
                 else {
-                    _this.yOffset += _this.configuration.mapMoveStepPixels;
+                    _this.yOffset -= _this.configuration.mapMoveStepPixels;
                 }
                 _this.yOffset = _this.yOffset % _this.configuration.tileSize;
                 if (_this.yOffset === 0) {
                     clearInterval(intervalHandle);
+                    _this.mapMoving = false;
                 }
             }, this.configuration.drawFrequencyMilliseconds);
         }
         else {
+            if (direction == Direction_1.default.Left) {
+                this.xPosition--;
+            }
+            else {
+                this.xPosition++;
+            }
             intervalHandle = setInterval(function () {
-                if (direction === Direction_1["default"].Right) {
-                    _this.xOffset += _this.configuration.mapMoveStepPixels;
+                if (direction === Direction_1.default.Right) {
+                    _this.xOffset -= _this.configuration.mapMoveStepPixels;
                 }
                 else {
-                    _this.xOffset -= _this.configuration.mapMoveStepPixels;
+                    _this.xOffset += _this.configuration.mapMoveStepPixels;
                 }
                 _this.xOffset = _this.xOffset % _this.configuration.tileSize;
                 if (_this.xOffset === 0) {
                     clearInterval(intervalHandle);
+                    _this.mapMoving = false;
                 }
             }, this.configuration.drawFrequencyMilliseconds);
         }
@@ -201,6 +223,7 @@ var CanvasMap = (function () {
     CanvasMap.prototype.draw = function () {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawBackground();
+        this.drawCharacter();
         if (this.configuration.drawGrid) {
             this.drawGrid();
         }
@@ -218,13 +241,19 @@ var CanvasMap = (function () {
         for (var i = -1 * this.configuration.tileSize; i < this.canvas.width + this.configuration.tileSize; i = i + this.configuration.tileSize) {
             this.context.beginPath();
             this.context.moveTo(i + this.xOffset, 0);
-            this.context.lineTo(i + this.xOffset, 320);
+            this.context.lineTo(i + this.xOffset, this.canvas.height);
             this.context.stroke();
             this.context.beginPath();
             this.context.moveTo(0, i + this.yOffset);
             this.context.lineTo(this.canvas.width, i + this.yOffset);
             this.context.stroke();
         }
+    };
+    CanvasMap.prototype.drawCharacter = function () {
+        var center = this.canvas.width / 2;
+        var tileSize = this.configuration.tileSize;
+        var offsetCenter = center - tileSize / 2;
+        this.context.fillRect(offsetCenter, offsetCenter, tileSize, tileSize);
     };
     CanvasMap.prototype.loadImageAsset = function (imageAssetUrl) {
         var imageElement = new Image(0, 0);
@@ -236,9 +265,16 @@ var CanvasMap = (function () {
         imageElement.src = imageAssetUrl;
         return loadPromise;
     };
+    Object.defineProperty(CanvasMap.prototype, "mapPosition", {
+        get: function () {
+            return new MapPosition_1.default(this.xPosition, this.yPosition);
+        },
+        enumerable: true,
+        configurable: true
+    });
     return CanvasMap;
 }());
-exports["default"] = CanvasMap;
+exports.default = CanvasMap;
 
 
 /***/ }),
@@ -252,7 +288,7 @@ exports["default"] = CanvasMap;
 
 "use strict";
 
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var CanvasMapConfiguration = (function () {
     function CanvasMapConfiguration() {
         this.tileSize = 32;
@@ -268,7 +304,7 @@ var CanvasMapConfiguration = (function () {
     }
     return CanvasMapConfiguration;
 }());
-exports["default"] = CanvasMapConfiguration;
+exports.default = CanvasMapConfiguration;
 
 
 /***/ }),
@@ -282,7 +318,7 @@ exports["default"] = CanvasMapConfiguration;
 
 "use strict";
 
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var Direction;
 (function (Direction) {
     Direction[Direction["Up"] = 0] = "Up";
@@ -290,7 +326,29 @@ var Direction;
     Direction[Direction["Left"] = 2] = "Left";
     Direction[Direction["Right"] = 3] = "Right";
 })(Direction || (Direction = {}));
-exports["default"] = Direction;
+exports.default = Direction;
+
+
+/***/ }),
+
+/***/ "./src/MapPosition.ts":
+/*!****************************!*\
+  !*** ./src/MapPosition.ts ***!
+  \****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var MapPosition = (function () {
+    function MapPosition(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    return MapPosition;
+}());
+exports.default = MapPosition;
 
 
 /***/ }),
@@ -304,36 +362,51 @@ exports["default"] = Direction;
 
 "use strict";
 
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var CanvasMap_1 = __webpack_require__(/*! ./CanvasMap */ "./src/CanvasMap.ts");
 var CanvasMapConfiguration_1 = __webpack_require__(/*! ./CanvasMapConfiguration */ "./src/CanvasMapConfiguration.ts");
 var Direction_1 = __webpack_require__(/*! ./Direction */ "./src/Direction.ts");
 var canvas = document.getElementById("map-canvas");
-canvas.width = 320;
-canvas.height = 320;
+canvas.width = 352;
+canvas.height = 352;
 if (canvas === null) {
     throw new Error("Cannot get canvas");
 }
-var config = new CanvasMapConfiguration_1["default"]();
+var config = new CanvasMapConfiguration_1.default();
 config.drawGrid = true;
-var map = new CanvasMap_1["default"](canvas, config);
+var map = new CanvasMap_1.default(canvas, config);
 map.startRendering();
 window.addEventListener("keydown", function (e) {
     switch (e.code) {
         case "ArrowDown":
-            map.moveMap(Direction_1["default"].Up);
+            map.moveCharacter(Direction_1.default.Down);
             break;
         case "ArrowUp":
-            map.moveMap(Direction_1["default"].Down);
+            map.moveCharacter(Direction_1.default.Up);
             break;
         case "ArrowLeft":
-            map.moveMap(Direction_1["default"].Right);
+            map.moveCharacter(Direction_1.default.Left);
             break;
         case "ArrowRight":
-            map.moveMap(Direction_1["default"].Left);
+            map.moveCharacter(Direction_1.default.Right);
             break;
     }
+    updatePosition();
 });
+var updatePosition = function () {
+    var xPosition = document.getElementById("x-position");
+    var yPosition = document.getElementById("y-position");
+    var position = map.mapPosition;
+    if (xPosition === null) {
+        throw new Error("Cannot get x-position");
+    }
+    xPosition.innerText = position.x.toString();
+    if (yPosition === null) {
+        throw new Error("Cannot get y-position");
+    }
+    yPosition.innerHTML = position.y.toString();
+};
+updatePosition();
 
 
 /***/ })
